@@ -1,0 +1,17 @@
+RAY 불출검색기 V1.0 - GitHub 업로드 안내
+
+1. 이 ZIP을 휴대전화에서 압축 해제합니다.
+2. GitHub의 bulchul-helper 저장소로 들어갑니다.
+3. index.html, manifest.json, favicon.ico, icons 폴더를 저장소 최상단에 업로드합니다.
+4. 기존 materials.xlsx는 삭제하지 말고 그대로 둡니다.
+5. 업로드 후 1~3분 기다린 뒤 사이트를 새로고침합니다.
+6. 기존 홈 화면 바로가기는 삭제한 뒤 다시 '홈 화면에 추가'해야 새 아이콘이 보입니다.
+
+포함 파일
+- index.html
+- manifest.json
+- favicon.ico
+- icons/icon-192.png
+- icons/icon-512.png
+- icons/apple-touch-icon.png
+- icons/icon-1024.png
