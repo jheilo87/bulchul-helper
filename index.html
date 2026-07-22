@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1769d2">
+<title>RAY 불출검색기 V1.0</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--b:#1769d2;--bg:#f3f7fc;--t:#172033;--m:#6c7890;--l:#dce5f1;--r:#d92d20}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#edf4ff,#f7f9fc 260px);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:var(--t)}
+.wrap{max-width:720px;margin:auto;padding:0 14px 40px}.hero{margin:0 -14px 18px;padding:21px 18px 25px;color:#fff;background:linear-gradient(135deg,#1769d2,#3787ef);border-radius:0 0 28px 28px}
+.heroTop{display:flex;justify-content:space-between;align-items:center}.hero h1{font-size:24px;margin:0}.ver{font-size:12px;font-weight:800;background:#ffffff2b;padding:6px 10px;border-radius:999px}.hero p{font-size:14px;margin:8px 0 0}
+.card{background:#fff;border:1px solid var(--l);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 10px 30px #173a6618}
+.camera{width:100%;min-height:112px;border:0;border-radius:22px;background:linear-gradient(135deg,#145fc4,#2b7fed);color:#fff;font-size:20px;font-weight:900;box-shadow:0 12px 28px #1769d240}
+.camera small{display:block;font-size:13px;margin-top:7px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.menu{min-height:64px;border:1px solid var(--l);border-radius:16px;background:#fff;font-weight:850}.menu.blue{color:var(--b);background:#f7fbff}
+.hidden{display:none!important}.preview{display:none;width:100%;max-height:270px;object-fit:contain;margin-top:12px;border:1px solid var(--l);border-radius:15px}
+.status{display:none;margin-top:12px;background:#eef6ff;padding:12px;border-radius:14px;font-size:14px;color:#285989}.track{height:10px;background:#dde7f3;border-radius:999px;overflow:hidden;margin-top:9px}.bar{height:100%;width:0;background:var(--b)}
+.title{display:flex;justify-content:space-between;align-items:center;font-weight:900;margin-bottom:12px}.count{font-size:12px;color:var(--m)}
+.empty{text-align:center;color:var(--m);padding:20px 8px;font-size:14px}.danger{border:1px solid #ffc8c3;background:#fff1f0;border-radius:17px;padding:15px;margin-bottom:10px}.danger h3{color:var(--r);margin:0 0 7px}.part{font-weight:950;font-size:18px}.meta{margin-top:7px;font-size:14px;line-height:1.55}
+.memo{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--l);border-radius:15px;padding:13px;margin-bottom:9px}.reason{font-size:13px;color:var(--m);margin-top:5px;line-height:1.45}.mini{border:0;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:850}.edit{color:var(--b);background:#edf4ff}.del{color:var(--r);background:#fff0ef}
+.modal{position:fixed;inset:0;z-index:10;display:none;align-items:flex-end;justify-content:center;padding:12px;background:#0f172a99}.modal.show{display:flex}.sheet{width:min(720px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px 24px 18px 18px;padding:18px}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.head h2{margin:0}.close{width:40px;height:40px;border:0;border-radius:50%;font-size:20px}
+.field{margin-bottom:11px}.field label{display:block;font-size:13px;font-weight:850;margin-bottom:7px}.input,.area{width:100%;border:1px solid var(--l);border-radius:14px;padding:13px 14px;outline:none}.area{min-height:90px;resize:vertical}.row{display:flex;gap:8px}.row .input{flex:1}.btn{border:0;border-radius:13px;padding:12px 15px;font-weight:850;background:#eaf2ff;color:var(--b)}.btn.blue{background:var(--b);color:#fff}.btn.gray{background:#eef1f5;color:#4b5565}.full{width:100%}.note{font-size:12px;color:var(--m);line-height:1.5;margin-top:9px}.ok{padding:14px;text-align:center;background:#ecfdf3;border:1px solid #b6ecc8;color:#15803d;border-radius:16px;font-weight:850}
+@media(max-width:480px){.grid{grid-template-columns:1fr}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero"><div class="heroTop"><h1>RAY 불출검색기</h1><span class="ver">V1.0</span></div><p>A4 불출지를 촬영하면 삭제요청 품번과 이유를 찾아줍니다.</p></header>
+
+<section class="card">
+<button id="camBtn" class="camera">📷 불출지 촬영<small>A4 용지 전체가 보이게 찍어주세요</small></button>
+<input id="camInput" class="hidden" type="file" accept="image/*" capture="environment">
+<img id="preview" class="preview">
+<div id="status" class="status"><div id="statusText">사진을 준비합니다.</div><div class="track"><div id="bar" class="bar"></div></div></div>
+</section>
+
+<section class="card"><div class="grid">
+<button id="searchOpen" class="menu blue">🔍 품번 검색</button>
+<button id="memoOpen" class="menu blue">📝 메모 등록</button>
+<button id="manageOpen" class="menu">📋 메모 관리</button>
+<button id="dbStatus" class="menu" disabled>🔄 자재 DB 연결 중</button>
+</div>
+<div class="note">자재 정보는 GitHub의 materials.xlsx에서 자동으로 불러옵니다.<br>앱에서 등록한 메모는 현재 휴대전화에만 저장됩니다.</div></section>
+
+<section class="card"><div class="title"><span>최근 촬영 결과</span><span id="resultCount" class="count">0건</span></div><div id="scanResult" class="empty">아직 촬영 결과가 없습니다.</div></section>
+<section class="card"><div class="title"><span>최근 등록 메모</span><span id="memoCount" class="count">0건</span></div><div id="recent" class="empty">등록된 메모가 없습니다.</div></section>
+</div>
+
+<div id="searchModal" class="modal"><div class="sheet"><div class="head"><h2>품번 검색</h2><button class="close" data-close="searchModal">×</button></div><div class="row"><input id="searchInput" class="input" placeholder="품번 또는 품명 입력"><button id="searchBtn" class="btn blue">검색</button></div><div id="searchResult" class="empty">검색어를 입력해 주세요.</div></div></div>
+
+<div id="memoModal" class="modal"><div class="sheet"><div class="head"><h2 id="memoTitle">삭제요청 메모 등록</h2><button class="close" data-close="memoModal">×</button></div>
+<input id="editIndex" type="hidden" value="-1">
+<div class="field"><label>품번</label><input id="memoPart" class="input" placeholder="예: RA-03T-0076"></div>
+<div class="field"><label>이유 / 메모</label><textarea id="memoReason" class="area" placeholder="예: BOX 단위 신청, 소모품, 포장 벗겨짐 주의"></textarea></div>
+<button id="memoSave" class="btn blue full">저장</button><div class="note">상태는 자동으로 “삭제요청”으로 저장됩니다.</div></div></div>
+
+<div id="manageModal" class="modal"><div class="sheet"><div class="head"><h2>메모 관리</h2><button class="close" data-close="manageModal">×</button></div>
+<div class="row"><input id="manageSearch" class="input" placeholder="품번 또는 이유 검색"><button id="backupBtn" class="btn gray">백업</button><button id="restoreBtn" class="btn gray">복원</button></div>
+<input id="restoreInput" class="hidden" type="file" accept=".json"><div id="manageList" style="margin-top:14px"></div></div></div>
+
+<script>
+const $=id=>document.getElementById(id), MK='ray_issue_memos_v1', DK='ray_material_data_v1';
+const norm=v=>String(v||'').toUpperCase().replace(/\s+/g,'').replace(/[–—_]/g,'-').trim();
+const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const getM=()=>{try{return JSON.parse(localStorage.getItem(MK)||'[]')}catch{return[]}};
+const getD=()=>{try{return JSON.parse(localStorage.getItem(DK)||'[]')}catch{return[]}};
+const saveM=m=>{localStorage.setItem(MK,JSON.stringify(m));renderRecent();renderManage()};
+const open=id=>$(id).classList.add('show'), close=id=>$(id).classList.remove('show');
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
+document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)close(m.id)});
+
+$('camBtn').onclick=()=>$('camInput').click();
+$('searchOpen').onclick=()=>open('searchModal'); $('memoOpen').onclick=()=>memoForm(); $('manageOpen').onclick=()=>{renderManage();open('manageModal')};
+
+function memoForm(i=-1){$('editIndex').value=i;if(i>=0){let m=getM()[i];$('memoTitle').textContent='메모 수정';$('memoPart').value=m.part;$('memoReason').value=m.reason||''}else{$('memoTitle').textContent='삭제요청 메모 등록';$('memoPart').value='';$('memoReason').value=''}open('memoModal')}
+$('memoSave').onclick=()=>{let part=norm($('memoPart').value),reason=$('memoReason').value.trim();if(!part)return alert('품번을 입력해 주세요.');let a=getM(),i=+$('editIndex').value,d=a.findIndex((m,x)=>norm(m.part)===part&&x!==i);let item={part,reason,status:'삭제요청',updatedAt:new Date().toISOString()};if(d>=0){if(!confirm('같은 품번이 있습니다. 기존 메모를 덮어쓸까요?'))return;a[d]=item;if(i>=0&&i!==d)a.splice(i,1)}else if(i>=0)a[i]=item;else a.unshift(item);saveM(a);close('memoModal');alert('저장되었습니다.')};
+
+function card(m,i,compact){let d=document.createElement('div');d.className='memo';d.innerHTML=`<div><div class="part">🔴 ${esc(m.part)}</div><div class="reason">${esc(m.reason||'이유 미입력')}</div></div>${compact?'':`<div><button class="mini edit">수정</button> <button class="mini del">삭제</button></div>`}`;if(!compact){d.querySelector('.edit').onclick=()=>{close('manageModal');memoForm(i)};d.querySelector('.del').onclick=()=>{if(confirm('삭제할까요?')){let a=getM();a.splice(i,1);saveM(a)}}}return d}
+function renderRecent(){let a=getM(),b=$('recent');$('memoCount').textContent=a.length+'건';b.innerHTML='';b.className=a.length?'':'empty';if(!a.length)b.textContent='등록된 메모가 없습니다.';else a.slice(0,5).forEach((m,i)=>b.appendChild(card(m,i,true)))}
+function renderManage(){let a=getM(),q=$('manageSearch')?$('manageSearch').value.toUpperCase():'';let b=$('manageList');if(!b)return;b.innerHTML='';let f=a.map((m,i)=>({m,i})).filter(x=>(norm(x.m.part)+' '+String(x.m.reason||'').toUpperCase()).includes(q));if(!f.length)b.innerHTML='<div class="empty">일치하는 메모가 없습니다.</div>';else f.forEach(x=>b.appendChild(card(x.m,x.i,false)))}
+$('manageSearch').oninput=renderManage;
+
+$('backupBtn').onclick=()=>{let blob=new Blob([JSON.stringify(getM(),null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='RAY_불출메모_백업.json';a.click();URL.revokeObjectURL(u)};
+$('restoreBtn').onclick=()=>$('restoreInput').click();$('restoreInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d))throw 0;if(confirm(d.length+'건을 복원할까요?')){saveM(d);alert('복원되었습니다.')}}catch{alert('올바른 백업 파일이 아닙니다.')}e.target.value=''};
+
+function search(){let raw=$('searchInput').value.trim(),q=norm(raw),m=getM(),d=getD(),mm=m.filter(x=>norm(x.part).includes(q)||String(x.reason||'').toUpperCase().includes(raw.toUpperCase())),dd=d.filter(x=>norm(x.part).includes(q)||String(x.name||'').toUpperCase().includes(raw.toUpperCase())).slice(0,30),parts=[...new Set([...mm.map(x=>norm(x.part)),...dd.map(x=>norm(x.part))])],b=$('searchResult');b.innerHTML='';b.className='';if(!raw){b.className='empty';b.textContent='검색어를 입력해 주세요.';return}if(!parts.length){b.className='empty';b.textContent='검색 결과가 없습니다.';return}parts.forEach(p=>{let me=m.find(x=>norm(x.part)===p),ma=d.find(x=>norm(x.part)===p),x=document.createElement('div');if(me){x.className='danger';x.innerHTML=`<h3>🔴 삭제요청</h3><div class="part">${esc(p)}</div><div class="meta">${ma?.name?'<b>품명:</b> '+esc(ma.name)+'<br>':''}${ma?.location?'<b>위치:</b> '+esc(ma.location)+'<br>':''}<b>이유:</b> ${esc(me.reason||'이유 미입력')}</div>`}else{x.className='memo';x.innerHTML=`<div><div class="part">${esc(p)}</div><div class="reason">${ma?.name?'품명: '+esc(ma.name)+'<br>':''}${ma?.location?'위치: '+esc(ma.location):'등록된 삭제요청 없음'}</div></div>`}b.appendChild(x)})}
+$('searchBtn').onclick=search;$('searchInput').onkeydown=e=>{if(e.key==='Enter')search()};
+
+async function ensureXLSX(){
+  if(window.XLSX)return;
+  const urls=[
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  for(const url of urls){
+    try{
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src=url+'?v='+Date.now();
+        s.onload=()=>window.XLSX?resolve():reject(new Error('XLSX 없음'));
+        s.onerror=()=>reject(new Error('스크립트 불러오기 실패'));
+        document.head.appendChild(s);
+      });
+      if(window.XLSX)return;
+    }catch(e){console.warn('엑셀 라이브러리 재시도:',url,e)}
+  }
+  throw new Error('엑셀 라이브러리를 불러오지 못했습니다');
+}
+
+async function loadMaterials(){
+  const st=$('dbStatus');
+  st.textContent='🔄 자재 DB 연결 중';
+  try{
+    await ensureXLSX();
+    const res=await fetch('./materials.xlsx?v='+Date.now(),{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const buf=await res.arrayBuffer();
+    if(!buf.byteLength)throw new Error('엑셀 파일이 비어 있음');
+    const wb=XLSX.read(buf,{type:'array'});
+    let data=[],usedSheet='';
+    for(const sheetName of wb.SheetNames){
+      const ws=wb.Sheets[sheetName];
+      const grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      if(!grid.length)continue;
+      let headerRow=-1,pk=-1,nk=-1,lk=-1;
+      for(let i=0;i<Math.min(grid.length,20);i++){
+        const headers=(grid[i]||[]).map(v=>String(v||'').replace(/\s/g,'').toLowerCase());
+        const findIndex=words=>headers.findIndex(h=>words.some(w=>h.includes(w)));
+        const p=findIndex(['품번','품목코드','part','material']);
+        if(p>=0){
+          headerRow=i;pk=p;
+          nk=findIndex(['품명','자재명','자재내역','description','name']);
+          lk=findIndex(['위치','로케이션','location','loc']);
+          break;
+        }
+      }
+      if(headerRow<0)continue;
+      const rows=grid.slice(headerRow+1);
+      const parsed=rows.map(r=>({
+        part:norm(r[pk]),
+        name:nk>=0?String(r[nk]||'').trim():'',
+        location:lk>=0?String(r[lk]||'').trim():''
+      })).filter(x=>x.part);
+      if(parsed.length){data=parsed;usedSheet=sheetName;break;}
+    }
+    if(!data.length)throw new Error('품번 열이 있는 시트를 찾지 못했습니다');
+    localStorage.setItem(DK,JSON.stringify(data));
+    st.textContent='✅ 자재 DB '+data.length+'건 · '+usedSheet;
+  }catch(err){
+    const cached=getD();
+    st.textContent=cached.length?'🟡 저장된 DB '+cached.length+'건 사용':'🔴 자재 DB 연결 실패 · 다시 열기';
+    console.error('materials.xlsx 자동 불러오기 실패:',err);
+  }
+}
+
+function extract(t){t=String(t||'').toUpperCase().replace(/[–—_]/g,'-').replace(/\s*-\s*/g,'-');let set=new Set(),ps=[/\b[A-Z]{1,4}-\d{2}[A-Z]?-?[A-Z0-9]{0,2}-\d{3,6}\b/g,/\b[A-Z]{1,4}-[A-Z0-9]{2,6}-[A-Z0-9]{3,8}\b/g,/\b[A-Z]{1,4}\d{2,4}[A-Z]?\d{3,8}\b/g];ps.forEach(r=>(t.match(r)||[]).forEach(v=>set.add(norm(v))));return [...set].filter(v=>v.length>=7&&/\d/.test(v))}
+function show(parts){let m=getM(),d=getD(),hits=parts.map(p=>({p,me:m.find(x=>norm(x.part)===norm(p)),ma:d.find(x=>norm(x.part)===norm(p))})).filter(x=>x.me),b=$('scanResult');$('resultCount').textContent=hits.length+'건';b.innerHTML='';b.className='';if(!parts.length){b.className='empty';b.innerHTML='품번을 찾지 못했습니다.<br>용지가 밝고 선명하게 보이도록 다시 찍어주세요.';return}if(!hits.length){b.innerHTML=`<div class="ok">✅ 등록된 삭제요청이 없습니다.</div><div class="note">인식 품번 ${parts.length}개: ${parts.map(esc).join(', ')}</div>`;return}hits.forEach(x=>{let n=document.createElement('div');n.className='danger';n.innerHTML=`<h3>🔴 삭제요청</h3><div class="part">${esc(x.p)}</div><div class="meta">${x.ma?.name?'<b>품명:</b> '+esc(x.ma.name)+'<br>':''}${x.ma?.location?'<b>위치:</b> '+esc(x.ma.location)+'<br>':''}<b>이유:</b> ${esc(x.me.reason||'이유 미입력')}</div>`;b.appendChild(n)});let n=document.createElement('div');n.className='note';n.textContent=`품번 후보 ${parts.length}개 중 삭제요청 ${hits.length}건`;b.appendChild(n)}
+
+$('camInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;let u=URL.createObjectURL(f);$('preview').src=u;$('preview').style.display='block';$('status').style.display='block';$('bar').style.width='0%';try{let r=await Tesseract.recognize(f,'eng',{logger:m=>{if(m.status==='recognizing text'){let p=Math.round((m.progress||0)*100);$('bar').style.width=p+'%';$('statusText').textContent='품번을 읽는 중... '+p+'%'}else $('statusText').textContent='사진을 분석하는 중입니다...'}}),parts=extract(r.data.text);show(parts);$('bar').style.width='100%';$('statusText').textContent='분석 완료 · 품번 후보 '+parts.length+'개'}catch(err){$('statusText').textContent='분석에 실패했습니다. 더 가까이 선명하게 다시 찍어주세요.'}e.target.value='';setTimeout(()=>URL.revokeObjectURL(u),1000)};
+
+renderRecent();renderManage();loadMaterials();
+</script>
+</body></html>
